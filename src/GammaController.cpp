@@ -14,9 +14,7 @@ std::int32_t GammaController::OnFrameUpdate() {
             const auto trunc_time = std::floor(game_hour * 100) / 100;
             const auto current_gamma = ini_settings->GetSetting("fGamma:Display");
             if (settings->hours_to_gammas.contains(trunc_time)) {
-                logger::info("Found time key: {}", trunc_time);
                 if (const auto new_gamma = settings->hours_to_gammas[trunc_time]) {
-                    logger::info("Found gamma setting {} for time {}", new_gamma, trunc_time);
                     current_gamma->data.f = new_gamma;
                     ini_settings->WriteSetting(current_gamma);
                 }                
