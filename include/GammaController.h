@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Settings.h"
+
 class GammaController {
 protected:
     GammaController() = default;
@@ -12,8 +14,8 @@ public:
 
     static GammaController* GetSingleton();
 
-    static void OnFrameUpdate();
+    static std::int32_t OnFrameUpdate();
 
-    RE::Calendar* calendar = RE::Calendar::GetSingleton();
-    RE::INISettingCollection* ini_settings = RE::INISettingCollection::GetSingleton();
+    inline static REL::Relocation<decltype(OnFrameUpdate)> _OnFrameUpdate;
+    inline static Settings* settings = Settings::GetSingleton();
 };

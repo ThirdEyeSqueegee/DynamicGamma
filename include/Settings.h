@@ -12,6 +12,6 @@ public:
 
     static Settings* GetSingleton();
     static void LoadSettings();
-    
+
     std::unordered_map<float, float> hours_to_gammas;
 };

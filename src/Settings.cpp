@@ -18,9 +18,13 @@ void Settings::LoadSettings() {
 
     ini.GetAllKeys("General", keys);
 
-    for (const auto& key : keys) 
+    for (const auto& key : keys)
         settings->hours_to_gammas.insert(
             std::pair(std::stof(key.pItem), std::stof(ini.GetValue("General", key.pItem))));
+
+    for (const auto& p : settings->hours_to_gammas) {
+        logger::info("Found setting pair: {} = {}", p.first, p.second);
+    }
 
     logger::info("Loaded settings");
 }

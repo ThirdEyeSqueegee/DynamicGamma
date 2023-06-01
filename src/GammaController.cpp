@@ -7,19 +7,21 @@ GammaController* GammaController::GetSingleton() {
     return std::addressof(singleton);
 }
 
-void GammaController::OnFrameUpdate() {
-    const auto game_hour = GetSingleton()->calendar->GetHour();
-    const auto ini_settings = GetSingleton()->ini_settings;
-    const auto settings = Settings::GetSingleton();
-
-    const auto trunc_time = std::floor(game_hour * 100) / 100;
-
-    const auto current_gamma = ini_settings->GetSetting("fGamma");
-
-    logger::info("Time: {}, Gamma: {}", trunc_time, current_gamma->data.f);
-
-    if (settings->hours_to_gammas.contains(trunc_time)) {
-        current_gamma->data.f = settings->hours_to_gammas.find(trunc_time)->second;
-        ini_settings->WriteSetting(current_gamma);
+std::int32_t GammaController::OnFrameUpdate() {
+    if (const auto calendar = RE::Calendar::GetSingleton()) {
+        const auto game_hour = calendar->GetHour();
+        if (const auto ini_settings = RE::INIPrefSettingCollection::GetSingleton()) {
+            const auto trunc_time = std::floor(game_hour * 100) / 100;
+            const auto current_gamma = ini_settings->GetSetting("fGamma:Display");
+            if (settings->hours_to_gammas.contains(trunc_time)) {
+                logger::info("Found time key: {}", trunc_time);
+                if (const auto new_gamma = settings->hours_to_gammas[trunc_time]) {
+                    logger::info("Found gamma setting {} for time {}", new_gamma, trunc_time);
+                    current_gamma->data.f = new_gamma;
+                    ini_settings->WriteSetting(current_gamma);
+                }                
+            }
+        }
     }
+    return _OnFrameUpdate();
 }
