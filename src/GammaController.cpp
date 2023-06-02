@@ -14,13 +14,15 @@ std::int32_t GammaController::OnFrameUpdate() {
         const auto current_gamma = ini_settings->GetSetting("fGamma:Display");
         if (!settings->hours_to_gammas.contains(trunc_time)) {
             trunc_time = std::floor(game_hour * 10) / 10;
-            if (const auto new_gamma = settings->hours_to_gammas.find(trunc_time)->second) {
-                current_gamma->data.f = new_gamma;
+            if (const auto new_gamma = settings->hours_to_gammas.find(trunc_time);
+                new_gamma != settings->hours_to_gammas.end()) {
+                current_gamma->data.f = new_gamma->second;
                 ini_settings->WriteSetting(current_gamma);
             }
         } else {
-            if (const auto new_gamma = settings->hours_to_gammas.find(trunc_time)->second) {
-                current_gamma->data.f = new_gamma;
+            if (const auto new_gamma = settings->hours_to_gammas.find(trunc_time); 
+                new_gamma != settings->hours_to_gammas.end()) {
+                current_gamma->data.f = new_gamma->second;
                 ini_settings->WriteSetting(current_gamma);
             }
         }
