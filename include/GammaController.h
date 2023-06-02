@@ -18,4 +18,5 @@ public:
 
     inline static REL::Relocation<decltype(OnFrameUpdate)> _OnFrameUpdate;
     inline static Settings* settings = Settings::GetSingleton();
+    inline static RE::INIPrefSettingCollection* ini_settings = RE::INIPrefSettingCollection::GetSingleton();
 };
