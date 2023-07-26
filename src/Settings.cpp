@@ -1,4 +1,5 @@
 #include "Settings.h"
+
 #include "SimpleIni.h"
 
 Settings* Settings::GetSingleton() {
@@ -8,23 +9,32 @@ Settings* Settings::GetSingleton() {
 
 void Settings::LoadSettings() {
     logger::info("Loading settings");
+
     CSimpleIniA ini;
+
     ini.SetUnicode();
     ini.LoadFile(R"(.\Data\SKSE\Plugins\DynamicGamma.ini)");
 
-    const auto settings = GetSingleton();
+    debug_logging = ini.GetValue("Log", "Debug");
 
-    CSimpleIniA::TNamesDepend keys;
-
-    ini.GetAllKeys("General", keys);
-
-    for (const auto& key : keys)
-        settings->hours_to_gammas.insert(
-            std::pair(std::stof(key.pItem), std::stof(ini.GetValue("General", key.pItem))));
-
-    for (const auto& p : settings->hours_to_gammas) {
-        logger::info("Found setting pair: {} = {}", p.first, p.second);
+    if (debug_logging) {
+        spdlog::get("Global")->set_level(spdlog::level::level_enum::debug);
+        logger::debug("Debug logging enabled");
     }
+
+    CSimpleIniA::TNamesDepend exterior_keys;
+    CSimpleIniA::TNamesDepend interior_keys;
+
+    ini.GetAllKeys("Exterior", exterior_keys);
+    ini.GetAllKeys("Interior", interior_keys);
+
+    for (const auto& key : exterior_keys) exterior_map.emplace(std::stof(key.pItem), std::stof(ini.GetValue("Exterior", key.pItem)));
+    for (const auto& key : interior_keys) interior_map.emplace(std::stof(key.pItem), std::stof(ini.GetValue("Interior", key.pItem)));
+
+    for (const auto& [k, v] : exterior_map) logger::info("Loaded exterior setting: {} {}", k, v);
+    for (const auto& [k, v] : interior_map) logger::info("Loaded interior setting: {} {}", k, v);
+
+    every_x_frames = std::atoi(ini.GetValue("General", "uEveryXFrames"));
 
     logger::info("Loaded settings");
 }

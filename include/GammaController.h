@@ -1,10 +1,9 @@
 #pragma once
 
-#include "Settings.h"
-
 class GammaController {
 protected:
     GammaController() = default;
+    ~GammaController() = default;
 
 public:
     GammaController(const GammaController&) = delete;
@@ -15,8 +14,7 @@ public:
     static GammaController* GetSingleton();
 
     static std::int32_t OnFrameUpdate();
+    inline static REL::Relocation<decltype(&OnFrameUpdate)> _OnFrameUpdate;
 
-    inline static REL::Relocation<decltype(OnFrameUpdate)> _OnFrameUpdate;
-    inline static Settings* settings = Settings::GetSingleton();
-    inline static RE::INIPrefSettingCollection* ini_settings = RE::INIPrefSettingCollection::GetSingleton();
+    inline static int frame_counter = 0;
 };

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.27)
 message("Using toolchain file ${CMAKE_TOOLCHAIN_FILE}.")
 
 ########################################################################################################################
@@ -6,7 +6,7 @@ message("Using toolchain file ${CMAKE_TOOLCHAIN_FILE}.")
 ########################################################################################################################
 project(
         DynamicGamma
-        VERSION 1.0.2
+        VERSION 1.0.3
         LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,6 +18,12 @@ configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.rc.in
         ${CMAKE_CURRENT_BINARY_DIR}/version.rc
         @ONLY)
+
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/O2 /Ob3 /DNDEBUG")
+set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "/DEBUG /OPT:REF /OPT:ICF")
+
+message("CMAKE_CXX_FLAGS_RELWITHDEBINFO is ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+message("CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO is ${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO}")
 
 set(PUBLIC_HEADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}")
 set(headers
@@ -32,21 +38,11 @@ set(sources
 
         ${CMAKE_CURRENT_BINARY_DIR}/version.rc)
 
-set(tests)
-
 source_group(
         TREE ${CMAKE_CURRENT_SOURCE_DIR}
         FILES
         ${headers}
-        ${sources}
-        ${tests})
-
-#########################################################################################################################
-### Build options
-#########################################################################################################################
-message("Options:")
-option(BUILD_TESTS "Build unit tests." OFF)
-message("\tTests: ${BUILD_TESTS}")
+        ${sources})
 
 ########################################################################################################################
 ## Configure target DLL
@@ -77,54 +73,20 @@ install(TARGETS ${PROJECT_NAME}
         DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
 ########################################################################################################################
-## Configure unit tests
-########################################################################################################################
-if(BUILD_TESTS AND NOT " ${tests}" STREQUAL " ")
-    find_package(Catch2 CONFIG REQUIRED)
-
-    include(CTest)
-    include(Catch)
-
-    add_executable(
-            ${PROJECT_NAME}Tests
-            ${headers}
-            ${tests})
-
-    target_link_libraries(
-            ${PROJECT_NAME}Tests
-            PRIVATE
-            ${PROJECT_NAME}
-            Catch2::Catch2WithMain)
-
-    target_precompile_headers(${PROJECT_NAME}Tests
-            PRIVATE
-            include/PCH.h)
-
-    catch_discover_tests(${PROJECT_NAME}Tests)
-    add_test(NAME ${PROJECT_NAME}Tests COMMAND ${PROJECT_NAME}Tests)
-endif()
-
-########################################################################################################################
 ## Automatic plugin deployment
 ########################################################################################################################
 # Automatic deployment to FOMOD directory.
 set(BUILD_NAME "Release")
 
-install(DIRECTORY DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}/contrib/Distribution/Papyrus${BUILD_NAME}/")
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/contrib/Distribution/Plugin${BUILD_NAME}/")
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/contrib/Plugin${BUILD_NAME}/skse/plugins")
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> "${CMAKE_CURRENT_SOURCE_DIR}/contrib/Distribution/Plugin${BUILD_NAME}/")
-if(${CMAKE_BUILD_TYPE} STREQUAL Debug OR ${CMAKE_BUILD_TYPE} STREQUAL RelWithDebInfo)
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_PDB_FILE:${PROJECT_NAME}> "${CMAKE_CURRENT_SOURCE_DIR}/contrib/Distribution/Plugin${BUILD_NAME}/")
-endif()
-file(GLOB_RECURSE OUTPUT_DLLS "${CMAKE_CURRENT_SOURCE_DIR}/contrib/Distribution/**/*.dll")
-file(GLOB_RECURSE OUTPUT_PDBS "${CMAKE_CURRENT_SOURCE_DIR}/contrib/Distribution/**/*.pdb")
-file(GLOB_RECURSE OUTPUT_SCRIPTS "${CMAKE_CURRENT_SOURCE_DIR}/contrib/Distribution/**/*.pex")
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> "${CMAKE_CURRENT_SOURCE_DIR}/contrib/Plugin${BUILD_NAME}/skse/plugins")
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_PDB_FILE:${PROJECT_NAME}> "${CMAKE_CURRENT_SOURCE_DIR}/contrib/Plugin${BUILD_NAME}/skse/plugins")
+file(GLOB_RECURSE OUTPUT_DLLS "${CMAKE_CURRENT_SOURCE_DIR}/contrib/**/*.dll")
+file(GLOB_RECURSE OUTPUT_PDBS "${CMAKE_CURRENT_SOURCE_DIR}/contrib/**/*.pdb")
 set_property(TARGET ${PROJECT_NAME}
         APPEND PROPERTY ADDITIONAL_CLEAN_FILES "${OUTPUT_DLLS}")
 set_property(TARGET ${PROJECT_NAME}
         APPEND PROPERTY ADDITIONAL_CLEAN_FILES "${OUTPUT_PDBS}")
-set_property(TARGET ${PROJECT_NAME}
-        APPEND PROPERTY ADDITIONAL_CLEAN_FILES "${OUTPUT_SCRIPTS}")
