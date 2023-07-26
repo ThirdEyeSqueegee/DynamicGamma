@@ -17,4 +17,7 @@ public:
     inline static REL::Relocation<decltype(&OnFrameUpdate)> _OnFrameUpdate;
 
     inline static int frame_counter = 0;
+    inline static RE::TESGlobal* control_global = nullptr;
+
+    static void InitGlobal();
 };

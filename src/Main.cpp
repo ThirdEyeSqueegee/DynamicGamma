@@ -1,3 +1,4 @@
+#include "GammaController.h"
 #include "Hooks.h"
 #include "Logging.h"
 #include "SKSE/Interfaces.h"
@@ -8,6 +9,7 @@ void Listener(SKSE::MessagingInterface::Message* message) {
         SKSE::AllocTrampoline(14);
         Hooks::InstallHook();
         Settings::LoadSettings();
+        GammaController::InitGlobal();
     }
 }
 
