@@ -1,23 +1,16 @@
 #pragma once
 
-class GammaController {
-protected:
-    GammaController() = default;
-    ~GammaController() = default;
-
+class GammaController : public Singleton<GammaController> {
 public:
-    GammaController(const GammaController&) = delete;
-    GammaController(GammaController&&) = delete;
-    GammaController& operator=(const GammaController&) = delete;
-    GammaController& operator=(GammaController&&) = delete;
-
-    static GammaController* GetSingleton();
-
-    static std::int32_t OnFrameUpdate();
-    inline static REL::Relocation<decltype(&OnFrameUpdate)> _OnFrameUpdate;
+    static std::int32_t thunk();
+    inline static REL::Relocation<decltype(&thunk)> func;
 
     inline static int frame_counter = 0;
     inline static RE::TESGlobal* control_global = nullptr;
+    inline static RE::Setting* gamma_setting = nullptr;
+    inline static float original_gamma;
 
-    static void InitGlobal();
+    static void Init();
+
+    static void SetGlobal(float a_time, float a_gameHour, int a_factor);
 };

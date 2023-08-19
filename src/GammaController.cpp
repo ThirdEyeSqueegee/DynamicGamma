@@ -2,77 +2,88 @@
 
 #include "Settings.h"
 
-GammaController* GammaController::GetSingleton() {
-    static GammaController singleton;
-    return std::addressof(singleton);
-}
-
-std::int32_t GammaController::OnFrameUpdate() {
+std::int32_t GammaController::thunk() {
     frame_counter++;
 
     if (frame_counter < Settings::every_x_frames)
-        return _OnFrameUpdate();
+        return func();
 
     frame_counter = 0;
 
-    const auto ini_settings = RE::INIPrefSettingCollection::GetSingleton();
+    if (const auto ui = RE::UI::GetSingleton(); ui->IsApplicationMenuOpen() || ui->IsItemMenuOpen() || ui->IsModalMenuOpen()) {
+        if (gamma_setting->GetFloat() != original_gamma) {
+            logger::debug("Open menu detected, resetting gamma");
+            gamma_setting->data.f = original_gamma;
+        }
+
+        return func();
+    }
 
     if (control_global->value == 0.0f) {
-        if (const auto gamma = ini_settings->GetSetting("fGamma:Display"sv); gamma->GetFloat() != 1.0f)
-            gamma->data.f = 1.0f;
+        if (gamma_setting->GetFloat() != original_gamma) {
+            logger::debug("Global set to 0, resetting gamma");
+            gamma_setting->data.f = original_gamma;
+        }
 
-        return _OnFrameUpdate();
+        return func();
     }
 
     if (const auto calendar = RE::Calendar::GetSingleton()) {
         const auto game_hour = calendar->GetHour();
         auto trunc_time = std::floor(game_hour * 100) / 100;
         logger::debug("Current time: {}", trunc_time);
-        const auto current_gamma = ini_settings->GetSetting("fGamma:Display"sv);
-        logger::debug("Current gamma: {}", current_gamma->GetFloat());
-        if (const auto player = RE::PlayerCharacter::GetSingleton()) {
-            auto& map = Settings::exterior_map;
-            if (player->GetParentCell() && player->GetParentCell()->IsInteriorCell()) {
-                logger::debug("Player is in interior cell");
-                map = Settings::interior_map;
-            }
-            if (!map.contains(trunc_time)) {
-                logger::debug("{} not found in map, truncating again", trunc_time);
-                trunc_time = std::floor(game_hour * 10) / 10;
-                logger::debug("New trunc time: {}", trunc_time);
-                if (!map.contains(trunc_time)) {
-                    logger::debug("{} not found in map, truncating again", trunc_time);
-                    trunc_time = static_cast<float>(static_cast<int>(trunc_time));
-                    logger::debug("New trunc time: {}", trunc_time);
-                    if (const auto new_gamma = map.find(trunc_time); new_gamma != map.end()) {
-                        current_gamma->data.f = new_gamma->second;
-                        logger::debug("Set new gamma {} for {}", new_gamma->second, trunc_time);
-                    }
-                } else {
-                    if (const auto new_gamma = map.find(trunc_time); new_gamma != map.end()) {
-                        current_gamma->data.f = new_gamma->second;
-                        logger::debug("Set new gamma {} for {}", new_gamma->second, trunc_time);
-                    }
-                }
-            } else {
-                if (const auto new_gamma = map.find(trunc_time); new_gamma != map.end()) {
-                    current_gamma->data.f = new_gamma->second;
-                    logger::debug("Set new gamma {} for {}", new_gamma->second, trunc_time);
-                }
-            }
-        }
+        logger::debug("Current gamma: {}", gamma_setting->GetFloat());
+
+        SetGlobal(trunc_time, game_hour, 10);
     }
 
-    return _OnFrameUpdate();
+    return func();
 }
 
-void GammaController::InitGlobal() {
-    const auto handler = RE::TESDataHandler::GetSingleton();
-    control_global = handler->LookupForm<RE::TESGlobal>(0x10ab31, "Skyrim.esm"sv);
+void GammaController::Init() {
+    const auto ini_settings = RE::INIPrefSettingCollection::GetSingleton();
+    gamma_setting = ini_settings->GetSetting("fGamma:Display"sv);
+    original_gamma = gamma_setting->GetFloat();
+    logger::debug("Original gamma: {}", original_gamma);
+
+    const auto factory = RE::IFormFactory::GetConcreteFormFactoryByType<RE::TESGlobal>();
+    control_global = factory->Create();
     control_global->type = RE::TESGlobal::Type::kFloat;
     control_global->value = 1.0f;
-    if (control_global == nullptr)
-        logger::error("Failed to cache global");
+    control_global->SetFormEditorID("gammaglobal");
+
+    const auto& [map, lock] = RE::TESForm::GetAllFormsByEditorID();
+    RE::BSWriteLockGuard locker{lock};
+    if (map) 
+        map->emplace(control_global->GetFormEditorID(), control_global);
+
+    if (!control_global)
+        logger::error("ERROR: Failed to cache global");
     else
         logger::info("Cached global {} with value {}", control_global->GetFormEditorID(), control_global->value);
+}
+
+void GammaController::SetGlobal(float a_time, const float a_gameHour, int a_factor) {
+    if (const auto player = RE::PlayerCharacter::GetSingleton()) {
+        const auto* map = &Settings::exterior_map;
+        if (const auto parent_cell = player->GetParentCell()) {
+            if (parent_cell->IsInteriorCell()) {
+                logger::debug("Player is in interior cell {}", parent_cell->GetName());
+                map = &Settings::interior_map;
+            }
+        } else {
+            logger::debug("Player is in exterior cell");
+            map = &Settings::exterior_map;
+        }
+        if (!map->contains(a_time)) {
+            logger::debug("{} not found in map, truncating", a_time);
+            a_time = std::floor(a_gameHour * a_factor) / a_factor;
+            logger::debug("New trunc time: {}", a_time);
+            SetGlobal(a_time, a_gameHour, a_factor / 10);
+        } else {
+            const auto new_gamma = map->at(a_time);
+            gamma_setting->data.f = new_gamma;
+            logger::debug("Set new gamma {} for {}", new_gamma, a_time);
+        }
+    }
 }

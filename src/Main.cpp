@@ -6,10 +6,9 @@
 
 void Listener(SKSE::MessagingInterface::Message* message) {
     if (message->type == SKSE::MessagingInterface::kDataLoaded) {
-        SKSE::AllocTrampoline(14);
-        Hooks::InstallHook();
         Settings::LoadSettings();
-        GammaController::InitGlobal();
+        GammaController::Init();
+        Hooks::Install();
     }
 }
 

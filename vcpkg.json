@@ -1,13 +1,13 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "name": "dynamic-gamma",
-  "version-string": "1.0.5",
+  "version-string": "1.0.6",
   "license": "GPL-3.0-or-later",
   "features": {
     "plugin": {
       "description": "Build the SKSE plugin.",
-      "dependencies": ["commonlibsse-ng", "simpleini"]
+      "dependencies": [ "commonlibsse-ng", "simpleini" ]
     }
   },
-  "default-features": ["plugin"]
+  "default-features": [ "plugin" ]
 }
