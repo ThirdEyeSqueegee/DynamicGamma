@@ -6,7 +6,7 @@ message("Using toolchain file ${CMAKE_TOOLCHAIN_FILE}.")
 ########################################################################################################################
 project(
         DynamicGamma
-        VERSION 1.0.6
+        VERSION 1.0.7
         LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -29,7 +29,8 @@ configure_file(
 
 set(PUBLIC_HEADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}")
 set(headers
-        include/Settings.h)
+        include/Settings.h
+        include/ENBAPI.h)
 
 set(sources
         src/Logging.cpp
@@ -52,6 +53,7 @@ source_group(
 find_package(CommonLibSSE CONFIG REQUIRED)
 
 add_commonlibsse_plugin(${PROJECT_NAME} AUTHOR ThirdEyeSqueegee SOURCES ${headers} ${sources})
+
 add_library("${PROJECT_NAME}::${PROJECT_NAME}" ALIAS "${PROJECT_NAME}")
 
 find_path(SIMPLEINI_INCLUDE_DIRS "SimpleIni.h")
@@ -69,7 +71,8 @@ target_include_directories(${PROJECT_NAME}
 
 target_precompile_headers(${PROJECT_NAME}
         PRIVATE
-        include/PCH.h)
+        include/PCH.h
+        ${SIMPLEINI_INCLUDE_DIRS}/SimpleIni.h)
 
 install(DIRECTORY "${PUBLIC_HEADER_DIR}"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")

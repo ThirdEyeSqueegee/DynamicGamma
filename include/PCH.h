@@ -39,7 +39,6 @@
 #include <exception>
 #include <execution>
 #include <filesystem>
-#include <format>
 #include <forward_list>
 #include <fstream>
 #include <functional>
@@ -115,11 +114,7 @@ using namespace REL::literals;
 
 namespace logger = SKSE::log;
 
-namespace util {
-    using SKSE::stl::report_and_fail;
-}
-
-template <class DerivedType>
+template <class T>
 class Singleton {
 protected:
     constexpr Singleton() = default;
@@ -128,17 +123,17 @@ protected:
 public:
     constexpr Singleton(const Singleton&) = delete;
     constexpr Singleton(Singleton&&) = delete;
-    constexpr Singleton& operator=(const Singleton&) = delete;
-    constexpr Singleton& operator=(Singleton&&) = delete;
+    constexpr auto operator=(const Singleton&) = delete;
+    constexpr auto operator=(Singleton&&) = delete;
 
-    static DerivedType* GetSingleton() {
-        static DerivedType singleton;
+    static T* GetSingleton() {
+        static T singleton;
         return std::addressof(singleton);
     }
 };
 
-template <class DerivedType, class EventType>
-class EventSingleton : public RE::BSTEventSink<EventType> {
+template <class T, class E>
+class EventSingleton : public RE::BSTEventSink<E> {
 protected:
     constexpr EventSingleton() = default;
     constexpr ~EventSingleton() override = default;
@@ -146,19 +141,19 @@ protected:
 public:
     constexpr EventSingleton(const EventSingleton&) = delete;
     constexpr EventSingleton(EventSingleton&&) = delete;
-    constexpr EventSingleton& operator=(const EventSingleton&) = delete;
-    constexpr EventSingleton& operator=(EventSingleton&&) = delete;
+    constexpr auto operator=(const EventSingleton&) = delete;
+    constexpr auto operator=(EventSingleton&&) = delete;
 
-    static DerivedType* GetSingleton() {
-        static DerivedType singleton;
+    static T* GetSingleton() {
+        static T singleton;
         return std::addressof(singleton);
     }
 
     static void Register() {
-        using eventsource_t = RE::BSTEventSource<EventType>;
+        using eventsource_t = RE::BSTEventSource<E>;
 
-        auto name = std::string(typeid(EventType).name());
-        const std::regex p("struct |RE::|SKSE::");
+        auto name = std::string(typeid(E).name());
+        const std::regex p("struct |RE::|SKSE::| * __ptr64");
         name = std::regex_replace(name, p, "");
 
         if constexpr (std::is_base_of_v<eventsource_t, RE::BSInputDeviceManager>) {
@@ -171,23 +166,23 @@ public:
             ui->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
             return;
-        } else if constexpr (std::is_same_v<EventType, SKSE::ActionEvent>) {
+        } else if constexpr (std::is_same_v<E, SKSE::ActionEvent>) {
             SKSE::GetActionEventSource()->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
             return;
-        } else if constexpr (std::is_same_v<EventType, SKSE::CameraEvent>) {
+        } else if constexpr (std::is_same_v<E, SKSE::CameraEvent>) {
             SKSE::GetCameraEventSource()->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
             return;
-        } else if constexpr (std::is_same_v<EventType, SKSE::CrosshairRefEvent>) {
+        } else if constexpr (std::is_same_v<E, SKSE::CrosshairRefEvent>) {
             SKSE::GetCrosshairRefEventSource()->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
             return;
-        } else if constexpr (std::is_same_v<EventType, SKSE::ModCallbackEvent>) {
+        } else if constexpr (std::is_same_v<E, SKSE::ModCallbackEvent>) {
             SKSE::GetModCallbackEventSource()->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
             return;
-        } else if constexpr (std::is_same_v<EventType, SKSE::NiNodeUpdateEvent>) {
+        } else if constexpr (std::is_same_v<E, SKSE::NiNodeUpdateEvent>) {
             SKSE::GetNiNodeUpdateEventSource()->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
             return;
@@ -198,8 +193,7 @@ public:
             return;
         }
         const auto plugin = SKSE::PluginDeclaration::GetSingleton();
-        const auto error_msg = fmt::format("{}: Failed to register {} handler", plugin->GetName(), name);
-        SKSE::stl::report_and_fail(error_msg);
+        SKSE::stl::report_and_fail(fmt::format("{}: Failed to register {} handler", plugin->GetName(), name));
     }
 };
 
@@ -207,15 +201,21 @@ namespace stl {
     using namespace SKSE::stl;
 
     template <class T>
-    void write_thunk_call(std::uintptr_t a_src) {
+    void write_thunk_call() {
         SKSE::AllocTrampoline(14);
         auto& trampoline = SKSE::GetTrampoline();
-        T::func = trampoline.write_call<5>(a_src, T::thunk);
+        T::func = trampoline.write_call<5>(T::address, T::Thunk);
     }
 
-    template <class F, class T>
+    template <class S, class T>
     void write_vfunc() {
-        REL::Relocation<std::uintptr_t> vtbl{ F::VTABLE[0] };
-        T::func = vtbl.write_vfunc(T::idx, T::thunk);
+        REL::Relocation<std::uintptr_t> vtbl{ S::VTABLE[0] };
+        T::func = vtbl.write_vfunc(T::idx, T::Thunk);
+    }
+
+    template <class T>
+    void write_vfunc(const REL::VariantID variant_id) {
+        REL::Relocation<std::uintptr_t> vtbl{ variant_id };
+        T::func = vtbl.write_vfunc(T::idx, T::Thunk);
     }
 }

@@ -8,14 +8,15 @@ void Listener(SKSE::MessagingInterface::Message* message) {
     if (message->type == SKSE::MessagingInterface::kDataLoaded) {
         Settings::LoadSettings();
         GammaController::Init();
-        Hooks::Install();
+        if (!ENBAPI::enb_found)
+            Hooks::Install();
     }
 }
 
 SKSEPluginLoad(const SKSE::LoadInterface* skse) {
     InitializeLogging();
 
-    const auto plugin = SKSE::PluginDeclaration::GetSingleton();
+    const auto plugin  = SKSE::PluginDeclaration::GetSingleton();
     const auto version = plugin->GetVersion();
 
     logger::info("{} {} is loading...", plugin->GetName(), version);
