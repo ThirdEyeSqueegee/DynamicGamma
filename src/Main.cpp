@@ -8,7 +8,7 @@ void Listener(SKSE::MessagingInterface::Message* message) {
     if (message->type == SKSE::MessagingInterface::kDataLoaded) {
         Settings::LoadSettings();
         GammaController::Init();
-        if (!ENBAPI::enb_found)
+        if (!ENBAPI::linked_enb_functions)
             Hooks::Install();
     }
 }

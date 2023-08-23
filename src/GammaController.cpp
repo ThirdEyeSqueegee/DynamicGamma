@@ -65,15 +65,17 @@ void GammaController::Init() {
     else
         logger::info("Cached global {} with value {}", control_global->GetFormEditorID(), control_global->value);
 
-    ENBAPI::FindENB();
-    if (ENBAPI::enb_found) {
-        logger::info("Found ENB. Linking ENB functions...");
-        ENBAPI::LinkENBFunctions();
-        logger::info("Linked ENB functions");
-        const auto version = ENBAPI::get_enb_version();
-        logger::info("Current ENB version: v0.{}", version);
-        ENBAPI::set_enb_callback(ENBCallback);
-        logger::info("Registered ENB callback");
+    ENBAPI::FindD3D11();
+    if (ENBAPI::d3d11_handle) {
+        logger::info("Found d3d11.dll. Attempting to link ENB functions...");
+        if (ENBAPI::LinkENBFunctions()) {
+            logger::info("Linked ENB functions");
+            const auto version = ENBAPI::get_enb_version();
+            logger::info("Current ENB version: v0.{}", version);
+            ENBAPI::set_enb_callback(ENBCallback);
+            logger::info("Registered ENB callback");
+        }
+        logger::info("ENB not found. Installing main update hook...");
     }
 }
 
@@ -113,7 +115,7 @@ void GammaController::SetGlobal(float a_time, const float a_gameHour, int a_fact
             SetGlobal(a_time, a_gameHour, a_factor / 10);
         } else {
             const auto new_gamma = map->at(a_time);
-            if (ENBAPI::enb_found) {
+            if (ENBAPI::linked_enb_functions) {
                 ENBParameter brightness;
                 ENBAPI::get_enb_param(nullptr, "ENBEFFECT.FX", "CC: Brightness", &brightness);
                 std::memcpy(&brightness.data, &new_gamma, sizeof new_gamma);

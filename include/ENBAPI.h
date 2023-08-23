@@ -50,28 +50,52 @@ using enbgetrenderinfo_t = ENBRenderInfo* (*)();
 
 class ENBAPI : public Singleton<ENBAPI> {
 public:
-    inline static bool               enb_found           = false;
-    inline static HMODULE            enb_handle          = nullptr;
-    inline static enbsdkversion_t    get_enb_sdk_version = nullptr;
-    inline static enbversion_t       get_enb_version     = nullptr;
-    inline static enbsetcallback_t   set_enb_callback    = nullptr;
-    inline static enbgetparam_t      get_enb_param       = nullptr;
-    inline static enbsetparam_t      set_enb_param       = nullptr;
-    inline static enbgetrenderinfo_t get_enb_render_info = nullptr;
+    inline static bool               linked_enb_functions = false;
+    inline static HMODULE            d3d11_handle         = nullptr;
+    inline static enbsdkversion_t    get_enb_sdk_version  = nullptr;
+    inline static enbversion_t       get_enb_version      = nullptr;
+    inline static enbsetcallback_t   set_enb_callback     = nullptr;
+    inline static enbgetparam_t      get_enb_param        = nullptr;
+    inline static enbsetparam_t      set_enb_param        = nullptr;
+    inline static enbgetrenderinfo_t get_enb_render_info  = nullptr;
 
-    static void FindENB() {
-        enb_handle = GetModuleHandle(L"d3d11");
+    static void FindD3D11() { d3d11_handle = GetModuleHandle(L"d3d11"); }
 
-        if (enb_handle)
-            enb_found = true;
-    }
+    static bool LinkENBFunctions() {
+        auto found1 = false, found2 = false, found3 = false, found4 = false, found5 = false, found6 = false;
+        if (const auto handle1 = GetProcAddress(d3d11_handle, "ENBGetSDKVersion")) {
+            logger::info("Linked ENBGetSDKVersion");
+            get_enb_sdk_version = reinterpret_cast<enbsdkversion_t>(handle1);
+            found1              = true;
+        }
+        if (const auto handle2 = GetProcAddress(d3d11_handle, "ENBGetVersion")) {
+            logger::info("Linked ENBGetVersion");
+            get_enb_version = reinterpret_cast<enbversion_t>(handle2);
+            found2          = true;
+        }
+        if (const auto handle3 = GetProcAddress(d3d11_handle, "ENBSetCallbackFunction")) {
+            logger::info("Linked ENBSetCallbackFunction");
+            set_enb_callback = reinterpret_cast<enbsetcallback_t>(handle3);
+            found3           = true;
+        }
+        if (const auto handle4 = GetProcAddress(d3d11_handle, "ENBGetParameter")) {
+            logger::info("Linked ENBGetParameter");
+            get_enb_param = reinterpret_cast<enbgetparam_t>(handle4);
+            found4        = true;
+        }
+        if (const auto handle5 = GetProcAddress(d3d11_handle, "ENBSetParameter")) {
+            logger::info("Linked ENBSetParameter");
+            set_enb_param = reinterpret_cast<enbsetparam_t>(handle5);
+            found5        = true;
+        }
+        if (const auto handle6 = GetProcAddress(d3d11_handle, "ENBGetRenderInfo")) {
+            logger::info("Linked ENBGetRenderInfo");
+            get_enb_render_info = reinterpret_cast<enbgetrenderinfo_t>(handle6);
+            found6              = true;
+        }
+        if (found1 && found2 && found3 && found4 && found5 && found6)
+            return true;
 
-    static void LinkENBFunctions() {
-        get_enb_sdk_version = reinterpret_cast<enbsdkversion_t>(GetProcAddress(enb_handle, "ENBGetSDKVersion"));
-        get_enb_version     = reinterpret_cast<enbversion_t>(GetProcAddress(enb_handle, "ENBGetVersion"));
-        set_enb_callback    = reinterpret_cast<enbsetcallback_t>(GetProcAddress(enb_handle, "ENBSetCallbackFunction"));
-        get_enb_param       = reinterpret_cast<enbgetparam_t>(GetProcAddress(enb_handle, "ENBGetParameter"));
-        set_enb_param       = reinterpret_cast<enbsetparam_t>(GetProcAddress(enb_handle, "ENBSetParameter"));
-        get_enb_render_info = reinterpret_cast<enbgetrenderinfo_t>(GetProcAddress(enb_handle, "ENBGetRenderInfo"));
+        return false;
     }
 };
