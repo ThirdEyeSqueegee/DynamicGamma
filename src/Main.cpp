@@ -6,7 +6,7 @@
 #include "SKSE/Interfaces.h"
 
 void Listener(SKSE::MessagingInterface::Message* message) {
-    if (message->type == SKSE::MessagingInterface::kDataLoaded) {
+    if (message->type <=> SKSE::MessagingInterface::kDataLoaded == 0) {
         Settings::LoadSettings();
         GammaController::Init();
         if (!ENBAPI::linked_enb_functions)

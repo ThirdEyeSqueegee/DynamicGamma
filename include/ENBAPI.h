@@ -63,7 +63,7 @@ public:
         d3d11_handle = GetModuleHandle(L"d3d11");
     }
 
-    static bool LinkENBFunctions() {
+    static void LinkENBFunctions() {
         bool found1{}, found2{}, found3{}, found4{}, found5{}, found6{};
         if (const auto handle1{ GetProcAddress(d3d11_handle, "ENBGetSDKVersion") }) {
             logger::info("Linked ENBGetSDKVersion");
@@ -97,9 +97,6 @@ public:
         }
         if (found1 && found2 && found3 && found4 && found5 && found6) {
             linked_enb_functions = true;
-            return true;
         }
-
-        return false;
     }
 };
