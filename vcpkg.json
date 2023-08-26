@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "name": "dynamic-gamma",
-  "version-semver": "1.0.8",
+  "version-semver": "1.0.9",
   "dependencies": [
     "commonlibsse-ng",
     "simpleini"
@@ -11,7 +11,7 @@
     "default-registry": {
       "kind": "git",
       "repository": "https://github.com/microsoft/vcpkg",
-      "baseline": "417119555f155f6044dec7a379cd25466e339873"
+      "baseline": "436a061a544c124200200517b9ee55c5bb1b7a26"
     },
     "registries": [
       {
