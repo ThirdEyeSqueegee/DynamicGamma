@@ -1,6 +1,7 @@
 #pragma once
 
-class Settings : public Singleton<Settings> {
+class Settings : public Singleton<Settings>
+{
 public:
     static void LoadSettings();
 

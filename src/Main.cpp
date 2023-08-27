@@ -5,8 +5,10 @@
 
 #include "SKSE/Interfaces.h"
 
-void Listener(SKSE::MessagingInterface::Message* message) {
-    if (message->type <=> SKSE::MessagingInterface::kDataLoaded == 0) {
+void Listener(SKSE::MessagingInterface::Message* message)
+{
+    if (message->type <=> SKSE::MessagingInterface::kDataLoaded == 0)
+    {
         Settings::LoadSettings();
         GammaController::Init();
         if (!ENBAPI::linked_enb_functions)
@@ -14,7 +16,8 @@ void Listener(SKSE::MessagingInterface::Message* message) {
     }
 }
 
-SKSEPluginLoad(const SKSE::LoadInterface* skse) {
+SKSEPluginLoad(const SKSE::LoadInterface* skse)
+{
     InitializeLogging();
 
     const auto plugin{ SKSE::PluginDeclaration::GetSingleton() };

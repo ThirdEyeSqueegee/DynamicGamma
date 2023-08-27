@@ -1,6 +1,7 @@
 #include "Logging.h"
 
-void InitializeLogging() {
+void InitializeLogging()
+{
     auto path{ SKSE::log::log_directory() };
     if (!path)
         stl::report_and_fail("Unable to lookup SKSE logs directory.");

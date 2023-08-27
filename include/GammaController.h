@@ -2,11 +2,12 @@
 
 #include "ENBAPI.h"
 
-class GammaController : public Singleton<GammaController> {
+class GammaController : public Singleton<GammaController>
+{
 public:
-    static std::int32_t Thunk();
-
     static void Init();
+
+    static std::int32_t Thunk();
 
     static void WINAPI ENBCallback(ENBCallbackType callback_type);
 
@@ -22,5 +23,5 @@ public:
     inline static float               original_enb_brightness{};
     inline static RE::TESGlobal*      control_global{};
     inline static RE::Setting*        gamma_setting{};
-    inline static RE::BSReadWriteLock lock;
+    inline static RE::BSReadWriteLock lock{};
 };
