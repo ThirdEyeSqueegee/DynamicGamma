@@ -1,104 +1,148 @@
 #pragma once
 
-#include <cassert>
-#include <cctype>
-#include <cerrno>
-#include <cfenv>
-#include <cfloat>
-#include <cinttypes>
-#include <climits>
-#include <clocale>
-#include <cmath>
+/* +++++++++++++++++++++++++ C++23 Standard Library +++++++++++++++++++++++++ */
+
+// Concepts library
+#include <concepts>
+
+// Utilities library
+#include <any>
+#include <bitset>
+#include <chrono>
+#include <compare>
 #include <csetjmp>
 #include <csignal>
 #include <cstdarg>
 #include <cstddef>
-#include <cstdint>
-#include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <ctime>
+#include <expected>
+#include <functional>
+#include <initializer_list>
+#include <optional>
+#include <source_location>
+#include <tuple>
+#include <type_traits>
+#include <typeindex>
+#include <typeinfo>
+#include <utility>
+#include <variant>
+#include <version>
+
+// Dynamic memory management
+#include <memory>
+#include <memory_resource>
+#include <new>
+#include <scoped_allocator>
+
+// Numeric limits
+#include <cfloat>
+#include <cinttypes>
+#include <climits>
+#include <cstdint>
+#include <limits>
+#include <stdfloat>
+
+// Error handling
+#include <cassert>
+#include <cerrno>
+#include <exception>
+#include <stacktrace>
+#include <stdexcept>
+#include <system_error>
+
+// Strings library
+#include <cctype>
+#include <charconv>
+#include <cstring>
 #include <cuchar>
 #include <cwchar>
 #include <cwctype>
+#include <string>
+#include <string_view>
 
-#include <algorithm>
-#include <any>
+// Containers library
 #include <array>
-#include <atomic>
-#include <barrier>
-#include <bit>
-#include <bitset>
-#include <charconv>
-#include <chrono>
-#include <compare>
-#include <complex>
-#include <concepts>
-#include <condition_variable>
 #include <deque>
-#include <exception>
-#include <execution>
-#include <filesystem>
 #include <forward_list>
+#include <list>
+#include <map>
+#include <queue>
+#include <set>
+#include <span>
+#include <stack>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
+// Iterators library
+#include <iterator>
+
+// Ranges library
+#include <ranges>
+
+// Algorithms library
+#include <algorithm>
+#include <execution>
+
+// Numerics library
+#include <bit>
+#include <cfenv>
+#include <cmath>
+#include <complex>
+#include <numbers>
+#include <numeric>
+#include <random>
+#include <ratio>
+#include <valarray>
+
+// Localization library
+#include <clocale>
+#include <locale>
+
+// Input/output library
+#include <cstdio>
 #include <fstream>
-#include <functional>
-#include <future>
-#include <initializer_list>
 #include <iomanip>
 #include <ios>
 #include <iosfwd>
 #include <iostream>
 #include <istream>
-#include <iterator>
-#include <latch>
-#include <limits>
-#include <locale>
-#include <map>
-#include <memory>
-#include <memory_resource>
-#include <mutex>
-#include <new>
-#include <numbers>
-#include <numeric>
-#include <optional>
 #include <ostream>
-#include <queue>
-#include <random>
-#include <ranges>
-#include <ratio>
-#include <regex>
-#include <scoped_allocator>
-#include <semaphore>
-#include <set>
-#include <shared_mutex>
-#include <source_location>
-#include <span>
+#include <print>
+#include <spanstream>
 #include <sstream>
-#include <stack>
-#include <stdexcept>
 #include <streambuf>
-#include <string>
-#include <string_view>
+#include <strstream>
 #include <syncstream>
-#include <system_error>
-#include <thread>
-#include <tuple>
-#include <type_traits>
-#include <typeindex>
-#include <typeinfo>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
-#include <valarray>
-#include <variant>
-#include <vector>
-#include <version>
 
+// Filesystem library
+#include <filesystem>
+
+// Regular Expressions library
+#include <regex>
+
+// Atomic Operations library
+#include <atomic>
+
+// Thread support library
+#include <barrier>
+#include <condition_variable>
+#include <future>
+#include <latch>
+#include <mutex>
+#include <semaphore>
+#include <shared_mutex>
+#include <stop_token>
+#include <thread>
+
+/* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
+
+// clang-format off
 #include <RE/Skyrim.h>
 #include <REL/Relocation.h>
 #include <SKSE/SKSE.h>
 
-// clang-format off
 #include <ShlObj_core.h>
 #include <Psapi.h>
 #include <Windows.h>
@@ -116,8 +160,8 @@ template <typename T>
 class Singleton
 {
 protected:
-    constexpr Singleton()  = default;
-    constexpr ~Singleton() = default;
+    constexpr Singleton() noexcept  = default;
+    constexpr ~Singleton() noexcept = default;
 
 public:
     constexpr Singleton(const Singleton&)      = delete;
@@ -125,7 +169,7 @@ public:
     constexpr auto operator=(const Singleton&) = delete;
     constexpr auto operator=(Singleton&&)      = delete;
 
-    static T* GetSingleton()
+    [[nodiscard]] static constexpr T* GetSingleton() noexcept
     {
         static T singleton;
         return std::addressof(singleton);
@@ -136,8 +180,8 @@ template <typename TDerived, typename TEvent>
 class EventSingleton : public RE::BSTEventSink<TEvent>
 {
 protected:
-    constexpr EventSingleton()           = default;
-    constexpr ~EventSingleton() override = default;
+    constexpr EventSingleton() noexcept           = default;
+    constexpr ~EventSingleton() noexcept override = default;
 
 public:
     constexpr EventSingleton(const EventSingleton&) = delete;
@@ -145,66 +189,58 @@ public:
     constexpr auto operator=(const EventSingleton&) = delete;
     constexpr auto operator=(EventSingleton&&)      = delete;
 
-    static TDerived* GetSingleton()
+    [[nodiscard]] static constexpr TDerived* GetSingleton() noexcept
     {
         static TDerived singleton;
         return std::addressof(singleton);
     }
 
-    static void Register()
+    static constexpr void Register() noexcept
     {
         using TEventSource = RE::BSTEventSource<TEvent>;
 
-        auto             name{ std::string(typeid(TEvent).name()) };
-        const std::regex p{ "struct |RE::|SKSE::| * __ptr64" };
-        name = std::regex_replace(name, p, "");
+        const std::string dirty_name{ typeid(TEvent).name() };
+        const std::regex  p{ "struct |RE::|SKSE::| * __ptr64" };
+        const auto        name{ std::regex_replace(dirty_name, p, "") };
 
-        if constexpr (std::is_base_of_v<TEventSource, RE::BSInputDeviceManager>)
-        {
+        if constexpr (std::is_base_of_v<TEventSource, RE::BSInputDeviceManager>) {
             const auto manager{ RE::BSInputDeviceManager::GetSingleton() };
             manager->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
             return;
         }
-        else if constexpr (std::is_base_of_v<TEventSource, RE::UI>)
-        {
+        else if constexpr (std::is_base_of_v<TEventSource, RE::UI>) {
             const auto ui{ RE::UI::GetSingleton() };
             ui->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
             return;
         }
-        else if constexpr (std::is_same_v<TEvent, SKSE::ActionEvent>)
-        {
+        else if constexpr (std::is_same_v<TEvent, SKSE::ActionEvent>) {
             SKSE::GetActionEventSource()->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
             return;
         }
-        else if constexpr (std::is_same_v<TEvent, SKSE::CameraEvent>)
-        {
+        else if constexpr (std::is_same_v<TEvent, SKSE::CameraEvent>) {
             SKSE::GetCameraEventSource()->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
             return;
         }
-        else if constexpr (std::is_same_v<TEvent, SKSE::CrosshairRefEvent>)
-        {
+        else if constexpr (std::is_same_v<TEvent, SKSE::CrosshairRefEvent>) {
             SKSE::GetCrosshairRefEventSource()->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
             return;
         }
-        else if constexpr (std::is_same_v<TEvent, SKSE::ModCallbackEvent>)
-        {
+        else if constexpr (std::is_same_v<TEvent, SKSE::ModCallbackEvent>) {
             SKSE::GetModCallbackEventSource()->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
             return;
         }
-        else if constexpr (std::is_same_v<TEvent, SKSE::NiNodeUpdateEvent>)
-        {
+        else if constexpr (std::is_same_v<TEvent, SKSE::NiNodeUpdateEvent>) {
             SKSE::GetNiNodeUpdateEventSource()->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
             return;
         }
-        else if constexpr (std::is_base_of_v<TEventSource, RE::ScriptEventSourceHolder>)
-        {
+        else if constexpr (std::is_base_of_v<TEventSource, RE::ScriptEventSourceHolder>) {
             const auto holder{ RE::ScriptEventSourceHolder::GetSingleton() };
             holder->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
@@ -220,7 +256,7 @@ namespace stl
     using namespace SKSE::stl;
 
     template <typename T>
-    void write_thunk_call()
+    constexpr auto write_thunk_call() noexcept
     {
         SKSE::AllocTrampoline(14);
         auto& trampoline{ SKSE::GetTrampoline() };
@@ -228,14 +264,14 @@ namespace stl
     }
 
     template <typename TDest, typename TSource>
-    void write_vfunc()
+    constexpr auto write_vfunc() noexcept
     {
         REL::Relocation<std::uintptr_t> vtbl{ TDest::VTABLE[0] };
         TSource::func = vtbl.write_vfunc(TSource::idx, TSource::Thunk);
     }
 
     template <typename T>
-    void write_vfunc(const REL::VariantID variant_id)
+    constexpr auto write_vfunc(const REL::VariantID variant_id) noexcept
     {
         REL::Relocation<std::uintptr_t> vtbl{ variant_id };
         T::func = vtbl.write_vfunc(T::idx, T::Thunk);

@@ -5,10 +5,9 @@
 
 #include "SKSE/Interfaces.h"
 
-void Listener(SKSE::MessagingInterface::Message* message)
+void Listener(SKSE::MessagingInterface::Message* message) noexcept
 {
-    if (message->type <=> SKSE::MessagingInterface::kDataLoaded == 0)
-    {
+    if (message->type <=> SKSE::MessagingInterface::kDataLoaded == 0) {
         Settings::LoadSettings();
         GammaController::Init();
         if (!ENBAPI::linked_enb_functions)

@@ -4,7 +4,7 @@
 
 namespace Hooks
 {
-    void Install()
+    void Install() noexcept
     {
         stl::write_thunk_call<GammaController>();
         logger::info("Installed main update hook");

@@ -5,7 +5,7 @@
 class GammaController : public Singleton<GammaController>
 {
 public:
-    static void Init();
+    static void Init() noexcept;
 
     static std::int32_t Thunk();
 
