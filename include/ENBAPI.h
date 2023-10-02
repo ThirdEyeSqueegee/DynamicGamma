@@ -45,11 +45,11 @@ public:
 };
 
 using ENBSDKVersion    = long (*)();
-using ENBVersion       = long    (*)();
+using ENBVersion       = long (*)();
 using ENBCallback      = void(WINAPI*)(ENBCallbackType a_callback_type);
-using ENBSetCallback   = void             (*)(ENBCallback a_callback_func);
-using ENBGetParameter  = BOOL            (*)(const char* a_filename, const char* a_category, const char* a_keyname, ENBParameter* a_out);
-using ENBSetParameter  = BOOL            (*)(const char* a_filename, const char* a_category, const char* a_keyname, ENBParameter* a_in);
+using ENBSetCallback   = void (*)(ENBCallback a_callback_func);
+using ENBGetParameter  = BOOL (*)(const char* a_filename, const char* a_category, const char* a_keyname, ENBParameter* a_out);
+using ENBSetParameter  = BOOL (*)(const char* a_filename, const char* a_category, const char* a_keyname, ENBParameter* a_in);
 using ENBGetRenderInfo = ENBRenderInfo* (*)();
 
 class ENBAPI : public Singleton<ENBAPI>
