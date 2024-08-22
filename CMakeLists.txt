@@ -1,20 +1,16 @@
-cmake_minimum_required(VERSION 3.27)
+cmake_minimum_required(VERSION 3.30)
 message("Using toolchain file ${CMAKE_TOOLCHAIN_FILE}.")
 
-########################################################################################################################
-## Define project
-########################################################################################################################
 project(
   DynamicGamma
-  VERSION 1.0.12
+  VERSION 2.0.0
   LANGUAGES CXX
 )
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF)
-
-include(GNUInstallDirs)
+set(CMAKE_OPTIMIZE_DEPENDENCIES ON)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.rc.in
@@ -22,23 +18,20 @@ configure_file(
   @ONLY
 )
 
-set(PUBLIC_HEADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}")
-
-set(
+# Add headers
+file(
+  GLOB_RECURSE
   headers
-    include/Settings.h
-    include/ENBAPI.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h
 )
+list(REMOVE_ITEM headers ${CMAKE_CURRENT_SOURCE_DIR}/include/PCH.h)
 
-set(
+# Add sources
+file(
+  GLOB_RECURSE
   sources
-    src/Logging.cpp
-    src/Main.cpp
-    src/Hooks.cpp
-    src/Settings.cpp
-    src/GammaController.cpp
-
-    ${CMAKE_CURRENT_BINARY_DIR}/version.rc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/version.rc
 )
 
 source_group(
@@ -46,10 +39,10 @@ source_group(
   FILES ${headers} ${sources}
 )
 
-########################################################################################################################
-## Configure target DLL
-########################################################################################################################
-find_package(CommonLibSSE CONFIG REQUIRED)
+# Add CommonLibSSE-NG
+set(BUILD_TESTS OFF)
+add_subdirectory($ENV{CommonLibSSEPath} CommonLibSSE-NG)
+include($ENV{CommonLibSSEPath}/cmake/CommonLibSSE.cmake)
 
 add_commonlibsse_plugin(
   ${PROJECT_NAME}
@@ -57,78 +50,56 @@ add_commonlibsse_plugin(
   SOURCES ${headers} ${sources}
 )
 
-add_library("${PROJECT_NAME}::${PROJECT_NAME}" ALIAS "${PROJECT_NAME}")
+add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 find_path(SIMPLEINI_INCLUDE_DIRS "SimpleIni.h")
+
+find_package(unordered_dense CONFIG REQUIRED)
 
 target_include_directories(
   ${PROJECT_NAME}
   PRIVATE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/src>
-    $<INSTALL_INTERFACE:src>
-    ${SIMPLEINI_INCLUDE_DIRS}
-)
-
-target_include_directories(
-  ${PROJECT_NAME}
+  ${SIMPLEINI_INCLUDE_DIRS}
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 target_precompile_headers(
   ${PROJECT_NAME}
   PRIVATE
-    include/PCH.h
-    ${SIMPLEINI_INCLUDE_DIRS}/SimpleIni.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/PCH.h
+  ${SIMPLEINI_INCLUDE_DIRS}/SimpleIni.h
 )
 
-install(
-  DIRECTORY "${PUBLIC_HEADER_DIR}"
-  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+target_link_libraries(
+  ${PROJECT_NAME}
+  PRIVATE
+  unordered_dense::unordered_dense
 )
 
-install(
-  TARGETS ${PROJECT_NAME}
-  DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-)
-
-########################################################################################################################
-## Automatic plugin deployment
-########################################################################################################################
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(BUILD_NAME "Debug")
+if(CMAKE_BUILD_TYPE STREQUAL Debug)
+  set(BUILD_NAME Debug)
 else()
-  set(BUILD_NAME "Release")
+  set(BUILD_NAME Release)
 endif()
 
 add_custom_command(
   TARGET ${PROJECT_NAME}
   POST_BUILD
   COMMAND
-    ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/contrib/Plugin${BUILD_NAME}/skse/plugins"
-)
-add_custom_command(
-  TARGET ${PROJECT_NAME}
-  POST_BUILD
+  ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/contrib/Plugin${BUILD_NAME}/skse/plugins
   COMMAND
-    ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> "${CMAKE_CURRENT_SOURCE_DIR}/contrib/Plugin${BUILD_NAME}/skse/plugins"
-)
-add_custom_command(
-  TARGET ${PROJECT_NAME}
-  POST_BUILD
+  ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> ${CMAKE_CURRENT_SOURCE_DIR}/contrib/Plugin${BUILD_NAME}/skse/plugins
   COMMAND
-    ${CMAKE_COMMAND} -E copy $<TARGET_PDB_FILE:${PROJECT_NAME}> "${CMAKE_CURRENT_SOURCE_DIR}/contrib/Plugin${BUILD_NAME}/skse/plugins"
+  ${CMAKE_COMMAND} -E copy $<TARGET_PDB_FILE:${PROJECT_NAME}> ${CMAKE_CURRENT_SOURCE_DIR}/contrib/Plugin${BUILD_NAME}/skse/plugins
+  COMMAND
+  ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/contrib/Config/${PROJECT_NAME}.ini ${CMAKE_CURRENT_SOURCE_DIR}/contrib/Plugin${BUILD_NAME}/skse/plugins
 )
 
-file(GLOB_RECURSE OUTPUT_DLLS "${CMAKE_CURRENT_SOURCE_DIR}/contrib/**/*.dll")
-file(GLOB_RECURSE OUTPUT_PDBS "${CMAKE_CURRENT_SOURCE_DIR}/contrib/**/*.pdb")
+file(GLOB_RECURSE OUTPUT_DLLS ${CMAKE_CURRENT_SOURCE_DIR}/contrib/**/*.dll)
+file(GLOB_RECURSE OUTPUT_PDBS ${CMAKE_CURRENT_SOURCE_DIR}/contrib/**/*.pdb)
 
 set_property(
   TARGET ${PROJECT_NAME}
-  APPEND PROPERTY ADDITIONAL_CLEAN_FILES "${OUTPUT_DLLS}"
-)
-set_property(
-  TARGET ${PROJECT_NAME}
-  APPEND PROPERTY ADDITIONAL_CLEAN_FILES "${OUTPUT_PDBS}"
+  APPEND PROPERTY ADDITIONAL_CLEAN_FILES ${OUTPUT_DLLS} ${OUTPUT_PDBS}
 )

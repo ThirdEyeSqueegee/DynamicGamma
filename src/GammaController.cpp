@@ -2,181 +2,127 @@
 
 #include "Settings.h"
 
-constexpr auto main_menu{ RE::MainMenu::MENU_NAME };
-constexpr auto map_menu{ RE::MapMenu::MENU_NAME };
-constexpr auto mist_menu{ RE::MistMenu::MENU_NAME };
-constexpr auto loading_menu{ RE::LoadingMenu::MENU_NAME };
-
 void GammaController::Init() noexcept
 {
     const auto ini_settings{ RE::INIPrefSettingCollection::GetSingleton() };
-    gamma_setting  = ini_settings->GetSetting("fGamma:Display"sv);
+    gamma_setting  = ini_settings->GetSetting("fGamma:Display");
     original_gamma = gamma_setting->GetFloat();
-    logger::debug("Original gamma: {:.2f}", original_gamma);
+    logger::info("Original gamma: {:.2f}", original_gamma);
 
     const auto factory{ RE::IFormFactory::GetConcreteFormFactoryByType<RE::TESGlobal>() };
     control_global        = factory->Create();
     control_global->type  = RE::TESGlobal::Type::kFloat;
-    control_global->value = 1.0f;
+    control_global->value = 1.0;
     control_global->SetFormEditorID("gammaglobal");
 
     if (const auto& [map, map_lock]{ RE::TESForm::GetAllFormsByEditorID() }; map) {
-        const RE::BSReadLockGuard guard{ map_lock };
+        const RE::BSWriteLockGuard guard{ map_lock };
         map->emplace(control_global->GetFormEditorID(), control_global);
     }
 
-    if (!control_global)
+    if (!control_global) {
         logger::error("ERROR: Failed to cache global");
-    else
+    }
+    else {
         logger::info("Cached global {} with value {}", control_global->GetFormEditorID(), control_global->value);
-
-    ENBAPI::FindD3D11();
-    if (ENBAPI::d3d11_handle) {
-        logger::info("Found d3d11.dll. Attempting to link ENB functions...");
-        ENBAPI::LinkENBFunctions();
-        if (ENBAPI::linked_enb_functions) {
-            logger::info("Linked ENB functions");
-            const auto version{ ENBAPI::get_enb_version() };
-            logger::info("Current ENB version: v0.{}", version);
-            ENBAPI::set_enb_callback(ENBCallback);
-            logger::info("Registered ENB callback");
-            ENBParameter brightness;
-            ENBAPI::get_enb_param(nullptr, "ENBEFFECT.FX", "CC: Brightness", &brightness);
-            std::memcpy(&original_enb_brightness, &brightness.data, sizeof original_enb_brightness);
-            logger::info("Cached ENB brightness: {:.2f}", original_enb_brightness);
-        }
-        else
-            logger::info("ENB not found. Installing main update hook...");
     }
+    logger::info("");
 }
 
-std::int32_t GammaController::Thunk()
+void WINAPI GammaController::ENBCallback(ENBCallbackType callback_type) noexcept
 {
-    const auto result{ func() };
-
-    frame_counter++;
-
-    if (frame_counter <=> Settings::every_x_frames < 0)
-        return result;
-
-    frame_counter = 0;
-
-    const auto current_gamma{ gamma_setting->GetFloat() };
-    if (const auto ui{ RE::UI::GetSingleton() }) {
-        if (ui->IsMenuOpen(main_menu) || ui->IsMenuOpen(map_menu) || ui->IsMenuOpen(mist_menu) || ui->IsMenuOpen(loading_menu)) {
-            if (current_gamma <=> original_gamma != 0) {
-                logger::debug("Open menu detected, resetting gamma");
-                const RE::BSReadLockGuard guard{ lock };
-                gamma_setting->data.f = original_gamma;
-            }
-            return result;
-        }
-    }
-    if (control_global->value <=> 0.0f == 0) {
-        if (current_gamma <=> original_gamma != 0) {
-            logger::debug("Global set to 0, resetting gamma");
-            const RE::BSReadLockGuard guard{ lock };
-            gamma_setting->data.f = original_gamma;
-        }
-        return result;
-    }
-    if (const auto calendar{ RE::Calendar::GetSingleton() }) {
-        if (const auto player{ RE::PlayerCharacter::GetSingleton() }) {
-            const auto game_hour{ calendar->GetHour() };
-            auto       trunc_time{ std::floor(game_hour * 100) / 100 };
-            logger::debug("Current time: {:.2f}", trunc_time);
-            logger::debug("Current gamma: {:.2f}", current_gamma);
-
-            const auto* map{ &Settings::exterior_map };
-            if (const auto parent_cell{ player->GetParentCell() }) {
-                if (parent_cell->IsInteriorCell()) {
-                    logger::debug("Player is in interior cell {}", parent_cell->GetName());
-                    map = &Settings::interior_map;
-                }
-            }
-            else
-                logger::debug("Player is in exterior cell");
-
-            if (!map->contains(trunc_time)) {
-                logger::debug("{:.2f} not found in map, truncating...", trunc_time);
-                trunc_time = std::floor(game_hour * 10) / 10;
-                logger::debug("New trunc time: {:.2f}", trunc_time);
-                if (!map->contains(trunc_time)) {
-                    logger::debug("{:.2f} not found in map, truncating...", trunc_time);
-                    trunc_time = std::floor(trunc_time);
-                    logger::debug("New trunc time: {:.2f}", trunc_time);
-                }
-            }
-            if (map->contains(trunc_time)) {
-                if (const auto new_gamma{ map->at(trunc_time) }; current_gamma <=> new_gamma != 0) {
-                    const RE::BSReadLockGuard guard{ lock };
-                    gamma_setting->data.f = new_gamma;
-                }
-            }
-        }
-    }
-
-    return result;
-}
-
-void WINAPI GammaController::ENBCallback(ENBCallbackType callback_type)
-{
-    if (callback_type <=> ENBCallbackType::BeginFrame == 0) {
-        call_counter++;
-
-        if (call_counter <=> Settings::every_x_frames < 0)
+    if (callback_type == ENBCallbackType::BeginFrame) {
+        if (is_procedural_correction_disabled) {
             return;
+        }
 
-        call_counter = 0;
+        if (!cached_original_enb_brightness) {
+            if (const auto procedural_correction{ ENBAPI::GetENBParameter<bool>("enbseries.ini", "COLORCORRECTION", "UseProceduralCorrection") };
+                procedural_correction.has_value() && !procedural_correction.value())
+            {
+                logger::error("ERROR: Procedural color correction is disabled");
+                is_procedural_correction_disabled = true;
+            }
+            else {
+                if (const auto brightness{ ENBAPI::GetENBParameter<float>(nullptr, "ENBEFFECT.FX", "CC: Brightness") }; brightness.has_value()) {
+                    original_enb_brightness = brightness.value();
+                    logger::info("Cached ENB brightness: {:.2f}", original_enb_brightness);
+                    cached_original_enb_brightness = true;
+                }
+                else {
+                    logger::error("ERROR: Failed to cache ENB brightness");
+                }
+            }
+        }
 
-        ENBParameter brightness;
-        float        current_brightness{};
-        ENBAPI::get_enb_param(nullptr, "ENBEFFECT.FX", "CC: Brightness", &brightness);
-        std::memcpy(&current_brightness, &brightness.data, sizeof current_brightness);
+        const auto now{ std::chrono::steady_clock::now() };
 
-        if (control_global->value <=> 0.0f == 0) {
-            if (current_brightness <=> original_enb_brightness != 0) {
+        if (now - last_run <= std::chrono::milliseconds(Settings::refresh_rate)) {
+            return;
+        }
+
+        last_run = now;
+
+        const auto current_brightness_opt{ ENBAPI::GetENBParameter<float>(nullptr, "ENBEFFECT.FX", "CC: Brightness") };
+        if (!current_brightness_opt.has_value()) {
+            logger::error("ERROR: Failed to get current ENB brightness");
+            return;
+        }
+
+        const auto current_brightness{ current_brightness_opt.value() };
+
+        if (control_global->value == 0.0) {
+            if (current_brightness != original_enb_brightness) {
                 logger::debug("Global set to 0, resetting brightness...");
-                std::memcpy(&brightness.data, &original_enb_brightness, sizeof original_enb_brightness);
-                ENBAPI::set_enb_param(nullptr, "ENBEFFECT.FX", "CC: Brightness", &brightness);
+                if (ENBAPI::SetENBParameter(nullptr, "ENBEFFECT.FX", "CC: Brightness", original_enb_brightness)) {
+                    logger::debug("Reset brightness to {:2f}", original_enb_brightness);
+                }
+                else {
+                    logger::error("ERROR: Failed to reset ENB brightness");
+                }
             }
             return;
         }
 
         if (const auto calendar{ RE::Calendar::GetSingleton() }) {
-            if (const auto player{ RE::PlayerCharacter::GetSingleton() }) {
-                const auto game_hour{ calendar->GetHour() };
-                auto       trunc_time{ std::floor(game_hour * 100) / 100 };
-                logger::debug("Current time: {:.2f}", trunc_time);
+            if (const auto player{ RE::PlayerCharacter::GetSingleton() }; player->Is3DLoaded()) {
+                const HourAndMinute hour_and_minute{ .hour = static_cast<u8>(calendar->GetHour()), .minute = static_cast<u8>(calendar->GetMinutes()) };
+                logger::debug("Current time: {}", hour_and_minute);
                 logger::debug("Current brightness: {:.2f}", current_brightness);
 
-                const auto* map{ &Settings::exterior_map };
+                auto map{ &Settings::exterior_map };
+                auto keys{ &Settings::exterior_keys_sorted };
                 if (const auto parent_cell{ player->GetParentCell() }) {
                     if (parent_cell->IsInteriorCell()) {
                         logger::debug("Player is in interior cell {}", parent_cell->GetName());
-                        map = &Settings::interior_map;
+                        map  = &Settings::interior_map;
+                        keys = &Settings::interior_keys_sorted;
                     }
                 }
-                else
+                else {
                     logger::debug("Player is in exterior cell");
-
-                if (!map->contains(trunc_time)) {
-                    logger::debug("{:.2f} not found in map, truncating...", trunc_time);
-                    trunc_time = std::floor(game_hour * 10) / 10;
-                    logger::debug("New trunc time: {:.2f}", trunc_time);
-                    if (!map->contains(trunc_time)) {
-                        logger::debug("{:.2f} not found in map, truncating...", trunc_time);
-                        trunc_time = std::floor(trunc_time);
-                        logger::debug("New trunc time: {:.2f}", trunc_time);
-                    }
                 }
-                const auto new_brightness{ map->at(trunc_time) };
-                if (current_brightness <=> new_brightness != 0) {
-                    std::memcpy(&brightness.data, &new_brightness, sizeof new_brightness);
-                    ENBAPI::set_enb_param(nullptr, "ENBEFFECT.FX", "CC: Brightness", &brightness);
-                    logger::debug("Set new brightness {:.2f} for {:.2f}", new_brightness, trunc_time);
+
+                if (const auto lower_bound{ std::ranges::lower_bound(*keys, hour_and_minute, pred) }; lower_bound != keys->end()) {
+                    logger::debug("Found nearest key {} for {}", *lower_bound, hour_and_minute);
+                    if (const auto new_brightness{ map->at(*lower_bound) }; current_brightness != new_brightness) {
+                        logger::debug("Found brightness {:.2f} for key {}", new_brightness, *lower_bound);
+                        if (ENBAPI::SetENBParameter(nullptr, "ENBEFFECT.FX", "CC: Brightness", new_brightness)) {
+                            logger::debug("Set new brightness {:.2f} for {}", new_brightness, hour_and_minute);
+                        }
+                        else {
+                            logger::error("ERROR: Failed to set ENB brightness");
+                        }
+                    }
                 }
             }
+        }
+    }
+
+    if (callback_type == ENBCallbackType::PreSave && cached_original_enb_brightness) {
+        logger::info("Resetting ENB brightness...");
+        if (ENBAPI::SetENBParameter(nullptr, "ENBEFFECT.FX", "CC: Brightness", original_enb_brightness)) {
+            logger::info("Reset ENB brightness to original value: {:.2f}", original_enb_brightness);
         }
     }
 }

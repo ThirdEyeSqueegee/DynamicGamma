@@ -1,22 +1,21 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "name": "dynamic-gamma",
-  "version-semver": "1.0.12",
-  "dependencies": ["commonlibsse-ng", "simpleini"],
-  "license": "GPL-3.0-or-later",
-  "vcpkg-configuration": {
-    "default-registry": {
-      "kind": "git",
-      "repository": "https://github.com/microsoft/vcpkg",
-      "baseline": "c6d6efed3e9b4242765bfe1b5c5befffd85f7b92"
-    },
-    "registries": [
-      {
-        "kind": "git",
-        "repository": "https://gitlab.com/colorglass/vcpkg-colorglass",
-        "baseline": "6309841a1ce770409708a67a9ba5c26c537d2937",
-        "packages": ["commonlibsse-ng"]
-      }
-    ]
-  }
+  "version-semver": "2.0.0",
+  "builtin-baseline": "bb002e69deb36c00e9ce21810f69eff349a833f7",
+  "dependencies": [
+    "fmt",
+    "spdlog",
+    "rapidcsv",
+    "simpleini",
+    "directxtk",
+    "unordered-dense"
+  ],
+  "overrides": [
+    {
+      "name": "fmt",
+      "version": "10.2.1"
+    }
+  ],
+  "license": "GPL-3.0-or-later"
 }
